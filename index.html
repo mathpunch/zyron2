@@ -1230,44 +1230,18 @@
 
           // About:blank feature
           openInAboutBlank() {
-            // Get the current page URL
-            const currentUrl = window.location.href
-            
-            // Navigate to about:blank
-            window.location.href = 'about:blank'
-            
-            // Wait a brief moment then write content
-            setTimeout(() => {
-              const html = `
-                <!DOCTYPE html>
-                <html>
-                  <head>
-                    <title>Zyron 2.0</title>
-                    <style>
-                      body, html {
-                        margin: 0;
-                        padding: 0;
-                        width: 100%;
-                        height: 100%;
-                        overflow: hidden;
-                      }
-                      iframe {
-                        width: 100%;
-                        height: 100%;
-                        border: none;
-                      }
-                    </style>
-                  </head>
-                  <body>
-                    <iframe src="${currentUrl}"></iframe>
-                  </body>
-                </html>
-              `
-              
-              document.open()
-              document.write(html)
-              document.close()
-            }, 10)
+            const win = window.open('about:blank', '_blank');
+            if (!win) {
+              alert('Popup blocked! Please allow popups for this site.');
+              return;
+            }
+            const doc = win.document;
+            doc.title = 'Zyron 2.0';
+            const iframe = doc.createElement('iframe');
+            iframe.style = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;';
+            iframe.src = window.location.href;
+            doc.body.style = 'margin:0;padding:0;overflow:hidden;';
+            doc.body.appendChild(iframe);
           },
 
           // Bookmark management
