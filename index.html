@@ -1233,40 +1233,41 @@
             // Get the current page URL
             const currentUrl = window.location.href
             
-            // Create the HTML for about:blank with iframe
-            const html = `
-              <!DOCTYPE html>
-              <html>
-                <head>
-                  <title>Zyron 2.0</title>
-                  <style>
-                    body, html {
-                      margin: 0;
-                      padding: 0;
-                      width: 100%;
-                      height: 100%;
-                      overflow: hidden;
-                    }
-                    iframe {
-                      width: 100%;
-                      height: 100%;
-                      border: none;
-                    }
-                  </style>
-                </head>
-                <body>
-                  <iframe src="${currentUrl}"></iframe>
-                </body>
-              </html>
-            `
+            // Navigate to about:blank
+            window.location.href = 'about:blank'
             
-            // Redirect current window to about:blank and write the content
-            document.open()
-            document.write(html)
-            document.close()
-            
-            // Update the URL to about:blank
-            window.history.pushState({}, '', 'about:blank')
+            // Wait a brief moment then write content
+            setTimeout(() => {
+              const html = `
+                <!DOCTYPE html>
+                <html>
+                  <head>
+                    <title>Zyron 2.0</title>
+                    <style>
+                      body, html {
+                        margin: 0;
+                        padding: 0;
+                        width: 100%;
+                        height: 100%;
+                        overflow: hidden;
+                      }
+                      iframe {
+                        width: 100%;
+                        height: 100%;
+                        border: none;
+                      }
+                    </style>
+                  </head>
+                  <body>
+                    <iframe src="${currentUrl}"></iframe>
+                  </body>
+                </html>
+              `
+              
+              document.open()
+              document.write(html)
+              document.close()
+            }, 10)
           },
 
           // Bookmark management
