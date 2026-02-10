@@ -696,8 +696,8 @@
         </div>
 
         <div class="search-container">
-          <form @submit.prevent="navigate()">
-            <input type="text" x-model="currentUrlInput" placeholder="search..." autofocus />
+          <form @submit.prevent="navigateFromHome()">
+            <input type="text" x-model="homeSearchInput" placeholder="search..." autofocus />
           </form>
         </div>
 
@@ -771,6 +771,7 @@
           tabs: [],
           activeTabId: null,
           currentUrlInput: '',
+          homeSearchInput: '', // Separate input for home screen
 
           // Bookmarks state
           bookmarks: [],
@@ -923,6 +924,12 @@
           navigate() {
             if (!this.currentUrlInput) return
             this.canvas.navigate(this.currentUrlInput)
+          },
+
+          navigateFromHome() {
+            if (!this.homeSearchInput) return
+            this.canvas.navigate(this.homeSearchInput)
+            this.homeSearchInput = '' // Clear home search after navigation
           },
 
           navigateBookmark(url) {
