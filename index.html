@@ -460,6 +460,20 @@
         display: flex;
       }
 
+      /* Tab Transition Overlay */
+      .tab-transition {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: var(--bg-primary);
+        z-index: 100;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+      }
+      .tab-transition.active {
+        opacity: 1;
+      }
+
       #canvas-container {
         width: 100%;
         height: 100%;
@@ -472,6 +486,92 @@
         width: 100%;
         height: 100%;
         border: none;
+      }
+
+      /* Recently Visited Section */
+      .recent-section {
+        width: 100%;
+        max-width: 480px;
+        padding: 0 20px;
+        margin-top: 24px;
+      }
+
+      .recent-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .recent-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        overflow: hidden;
+      }
+
+      .recent-item:hover {
+        background: var(--bg-secondary);
+        border-color: var(--accent);
+        box-shadow: 0 0 10px var(--shadow-red);
+        transform: translateX(4px);
+      }
+
+      .recent-favicon {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        border-radius: 3px;
+      }
+
+      .recent-info {
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .recent-title {
+        font-size: 0.8rem;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .recent-url {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 2px;
+      }
+
+      .recent-remove {
+        font-size: 14px;
+        color: var(--text-secondary);
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        flex-shrink: 0;
+        opacity: 0;
+        transition: all 0.2s;
+      }
+
+      .recent-item:hover .recent-remove {
+        opacity: 1;
+      }
+
+      .recent-remove:hover {
+        background: rgba(255, 0, 0, 0.2);
+        color: var(--accent);
       }
 
       /* Empty State / Logo Design */
@@ -678,6 +778,36 @@
 
       .add-card:hover {
         color: var(--accent);
+      }
+
+      /* About:blank Button */
+      .aboutblank-btn {
+        margin-top: 30px;
+        padding: 12px 30px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .aboutblank-btn:hover {
+        background: var(--bg-secondary);
+        border-color: var(--accent);
+        color: var(--accent);
+        box-shadow: 0 4px 12px var(--shadow-red);
+        transform: translateY(-2px);
+      }
+
+      .aboutblank-btn svg {
+        width: 18px;
+        height: 18px;
       }
 
       /* Modal */
@@ -896,6 +1026,9 @@
 
     <!-- Main Content -->
     <div class="content-area" x-show="ready" style="display: none">
+      <!-- Tab Transition Overlay -->
+      <div class="tab-transition" :class="{ active: tabTransitioning }"></div>
+
       <!-- ShaderCanvas manages iframes here -->
       <div id="canvas-container"></div>
 
@@ -964,6 +1097,52 @@
             </div>
           </div>
         </div>
+
+        <button class="aboutblank-btn" @click="openInAboutBlank()" style="align-self: center; position: relative; z-index: 2;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          Open in about:blank
+        </button>
+
+        <!-- Recently Visited -->
+        <div class="recent-section" style="position: relative; z-index: 2;" x-show="recentSites.length > 0">
+          <div class="section-header">
+            <h3>Recently visited</h3>
+            <button class="edit-btn" @click="clearRecent()">Clear</button>
+          </div>
+          <div class="recent-list">
+            <template x-for="(site, index) in recentSites.slice(0, 5)" :key="index">
+              <div class="recent-item" @click="navigateBookmark(site.url)">
+                <img
+                  class="recent-favicon"
+                  :src="`https://www.google.com/s2/favicons?domain=${site.url}&sz=32`"
+                  onerror="this.onerror=null;this.style.opacity='0'"
+                />
+                <div class="recent-info">
+                  <div class="recent-title" x-text="site.title || site.url"></div>
+                  <div class="recent-url" x-text="site.url"></div>
+                </div>
+                <div class="recent-remove" @click.stop="removeRecent(index)">×</div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- About:blank button - shows when browsing a page -->
+      <div style="position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 20;" x-show="!showNewTabUI && activeTab && activeTab.url">
+        <button class="aboutblank-btn" @click="openInAboutBlank()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          Open in about:blank
+        </button>
       </div>
     </div>
 
@@ -999,7 +1178,9 @@
           tabs: [],
           activeTabId: null,
           currentUrlInput: '',
-          homeSearchInput: '', // Separate input for home screen
+          homeSearchInput: '',
+          tabTransitioning: false,
+          recentSites: [],
 
           // Bookmarks state
           bookmarks: [],
@@ -1057,6 +1238,10 @@
               this.saveToStorage()
             }
 
+            // Load recent sites
+            const savedRecent = localStorage.getItem('zyron_recent_sites')
+            if (savedRecent) this.recentSites = JSON.parse(savedRecent)
+
             // 2. Import Libraries Dynamically
             const { ShaderCanvas } = await import('./shader-canvas.js')
             // ShaderClient is imported by ShaderCanvas usually, or we can import it if needed for static props
@@ -1079,13 +1264,19 @@
             })
 
             this.canvas.on(ShaderCanvas.EVENTS.URL_CHANGE, (data) => {
-              // Don't show newtab.html in address bar
               this.currentUrlInput =
                 data.decoded.includes('/newtab.html') || data.decoded === 'about:blank' ? '' : data.decoded
               this.refreshTabs()
             })
 
-            this.canvas.on(ShaderCanvas.EVENTS.TITLE_CHANGE, () => this.refreshTabs())
+            this.canvas.on(ShaderCanvas.EVENTS.TITLE_CHANGE, () => {
+              this.refreshTabs()
+              // Save to recent when we have both a title and a real URL
+              const tab = this.activeTab
+              if (tab && tab.url && tab.url !== 'about:blank' && !tab.url.includes('/newtab.html') && tab.title && tab.title !== 'New Tab') {
+                this.addToRecent({ url: tab.url, title: tab.title })
+              }
+            })
             this.canvas.on(ShaderCanvas.EVENTS.FAVICON_CHANGE, () => this.refreshTabs())
             this.canvas.on(ShaderCanvas.EVENTS.LOADING_START, () => this.refreshTabs())
             this.canvas.on(ShaderCanvas.EVENTS.LOADING_STOP, () => this.refreshTabs())
@@ -1146,7 +1337,14 @@
           },
 
           activateTab(id) {
-            this.canvas.switchSurface(id)
+            if (id === this.activeTabId) return
+            this.tabTransitioning = true
+            setTimeout(() => {
+              this.canvas.switchSurface(id)
+              setTimeout(() => {
+                this.tabTransitioning = false
+              }, 150)
+            }, 150)
           },
 
           navigate() {
@@ -1175,6 +1373,43 @@
 
           goForward() {
             this.canvas.goForward()
+          },
+
+          // Recent Sites
+          addToRecent(site) {
+            // Remove duplicate if exists
+            this.recentSites = this.recentSites.filter(s => s.url !== site.url)
+            // Add to front
+            this.recentSites.unshift(site)
+            // Keep max 10
+            if (this.recentSites.length > 10) this.recentSites = this.recentSites.slice(0, 10)
+            localStorage.setItem('zyron_recent_sites', JSON.stringify(this.recentSites))
+          },
+
+          removeRecent(index) {
+            this.recentSites.splice(index, 1)
+            localStorage.setItem('zyron_recent_sites', JSON.stringify(this.recentSites))
+          },
+
+          clearRecent() {
+            this.recentSites = []
+            localStorage.removeItem('zyron_recent_sites')
+          },
+
+          // About:blank feature
+          openInAboutBlank() {
+            const win = window.open('about:blank', '_blank');
+            if (!win) {
+              alert('Popup blocked! Please allow popups for this site.');
+              return;
+            }
+            const doc = win.document;
+            doc.title = 'Zyron 2.0';
+            const iframe = doc.createElement('iframe');
+            iframe.style = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;';
+            iframe.src = window.location.href;
+            doc.body.style = 'margin:0;padding:0;overflow:hidden;';
+            doc.body.appendChild(iframe);
           },
 
           // Bookmark management
