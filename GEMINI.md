@@ -1,4 +1,4 @@
-# Math Punch - Project Overview
+# Zyron 2.0 - Project Overview
 
 "Math Punch" is a modern, web-based proxy application that provides a "Virtual Browser" experience within a single page. It utilizes the **Shader Proxy engine** and **BareMux** transport to enable secure and efficient web navigation through a service worker.
 
