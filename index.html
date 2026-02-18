@@ -1216,30 +1216,36 @@
               }
             }, 8000)
 
-            // Define defaults
+            // Define defaults — YouTube (1), Twitch (5), and Deep AI (4) removed; Games added
             const defaults = [
-              { id: 1, name: 'YouTube', url: 'https://youtube.com?search=math+punch' },
               { id: 2, name: 'GitHub', url: 'https://github.com' },
               { id: 3, name: 'CrazyGames', url: 'https://crazygames.com' },
-              { id: 4, name: 'Deep AI', url: 'https://deepai.org' },
-              { id: 5, name: 'Twitch', url: 'https://www.twitch.tv' },
               { id: 6, name: 'SpenFlix', url: 'https://watch.spencerdevs.xyz' },
               { id: 7, name: 'Shuttlemath', url: 'https://shuttlemath.com' },
               { id: 8, name: 'nowgg', url: 'https://nowgg.fun' },
+              { id: 9, name: 'Games', url: '/zyrongxmes.html', icon: 'https://www.google.com/s2/favicons?domain=crazygames.com&sz=64' },
             ]
 
             // 1. Load and Merge bookmarks
             const savedBookmarks = localStorage.getItem('math_punch_bookmarks')
             if (savedBookmarks) {
               try {
-                this.bookmarks = JSON.parse(savedBookmarks).map((bm) => {
-                  if (bm.icon && bm.icon.includes('google.com/s2/favicons?domain=about:blank')) {
-                    bm.icon = ''
-                  }
-                  const defaultBm = defaults.find((d) => d.id === bm.id)
-                  if (defaultBm) return { ...bm, ...defaultBm }
-                  return bm
-                })
+                // Filter out removed defaults (YouTube=1, Twitch=5, DeepAI=4) and merge
+                const parsed = JSON.parse(savedBookmarks)
+                  .filter(bm => ![1, 4, 5].includes(bm.id)) // remove YouTube, DeepAI, Twitch
+                  .map((bm) => {
+                    if (bm.icon && bm.icon.includes('google.com/s2/favicons?domain=about:blank')) {
+                      bm.icon = ''
+                    }
+                    const defaultBm = defaults.find((d) => d.id === bm.id)
+                    if (defaultBm) return { ...bm, ...defaultBm }
+                    return bm
+                  })
+                // Add Games if not already present
+                if (!parsed.find(b => b.id === 9)) {
+                  parsed.push(defaults.find(d => d.id === 9))
+                }
+                this.bookmarks = parsed
                 this.saveToStorage()
               } catch {
                 this.bookmarks = defaults
