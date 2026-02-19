@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MathPunch | Library</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --accent: #00d4ff; 
+            --bg: #020408;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        body { 
+            margin: 0; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            color: white; 
+            height: 100vh; 
+            overflow: hidden; 
+            background-image: radial-gradient(circle at 50% -20%, #0d1b2a 0%, #020408 80%);
+        }
+
+        /* NAVIGATION */
+        .nav-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 900px;
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            background: rgba(15, 20, 30, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .search-wrapper {
+            display: flex;
+            align-items: center;
+            background: rgba(255,255,255,0.05);
+            padding: 8px 15px;
+            border-radius: 12px;
+            flex-grow: 1;
+            margin: 0 20px;
+        }
+
+        .search-wrapper input {
+            background: none;
+            border: none;
+            color: white;
+            padding-left: 10px;
+            width: 100%;
+            outline: none;
+            font-family: inherit;
+        }
+
+        #liveCount {
+            font-size: 0.8rem;
+            font-weight: 800;
+            background: var(--accent);
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        /* CONTENT GRID */
+        #container { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
+            gap: 20px; 
+            padding: 120px 5% 40px; 
+            height: 100vh;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
+        .zone-card { 
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            aspect-ratio: 16/10;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .zone-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+            background: rgba(255,255,255,0.08);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+
+        .zone-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.5;
+            transition: 0.3s;
+        }
+
+        .zone-card:hover img { opacity: 0.8; transform: scale(1.05); }
+
+        .zone-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 15px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.9));
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        /* VIEWER */
+        #zoneViewer { position: fixed; inset: 0; background: #000; display: none; z-index: 2000; }
+        #closeBtn { 
+            position: absolute; top: 20px; right: 20px; width: 45px; height: 45px; 
+            background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); 
+            color: white; border-radius: 12px; display: flex; align-items: center; 
+            justify-content: center; cursor: pointer; backdrop-filter: blur(10px); z-index: 2001; 
+        }
+        #closeBtn:hover { background: #ff4d4d; border-color: #ff4d4d; }
+        iframe { width: 100%; height: 100%; border: none; }
+
+        /* SCROLLBAR */
+        #container::-webkit-scrollbar { width: 6px; }
+        #container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<nav class="nav-container">
+    <div style="font-weight: 800; color: var(--accent); font-size: 1.2rem; letter-spacing: -0.5px;">MATHPUNCH</div>
+    <div class="search-wrapper">
+        <i class="fas fa-search" style="opacity: 0.4"></i>
+        <input id="searchBar" placeholder="Search mathpunch library..." oninput="filterZones()">
+    </div>
+    <div id="liveCount">0</div>
+</nav>
+
+<div id="container"></div>
+
+<div id="zoneViewer">
+    <div id="closeBtn" onclick="closeViewer()"><i class="fas fa-times"></i></div>
+    <iframe id="zoneFrame"></iframe>
+</div>
+
+<script>
+    const config = {
+        name: "MathPunch Library",
+        json: "https://cdn.jsdelivr.net/gh/mathpunch/assets@main/zones.json",
+        cover: "https://cdn.jsdelivr.net/gh/mathpunch/covers@main/",
+        html: "https://cdn.jsdelivr.net/gh/mathpunch/html@main/"
+    };
+
+    let zones = [];
+
+    async function init() {
+        try {
+            const response = await fetch(config.json);
+            zones = await response.json();
+            displayZones(zones);
+        } catch (err) {
+            document.getElementById("container").innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; margin-top: 50px; opacity: 0.5;">
+                    <i class="fas fa-exclamation-triangle"></i><br>
+                    Library Link Broken. Ensure 'mathpunch/assets' is public.
+                </div>`;
+        }
+    }
+
+    function displayZones(list) {
+        const container = document.getElementById("container");
+        container.innerHTML = "";
+        document.getElementById("liveCount").innerText = list.length;
+
+        list.forEach(z => {
+            const card = document.createElement("div");
+            card.className = "zone-card";
+            card.onclick = () => openZone(z);
+
+            let rawCover = z.cover || "";
+            let finalCover = rawCover.includes("{COVER_URL}") 
+                ? rawCover.replace("{COVER_URL}/", config.cover) 
+                : config.cover + rawCover.replace(/^\//, "");
+
+            card.innerHTML = `
+                <img src="${finalCover}" onerror="this.src='https://via.placeholder.com/400x250/111/fff?text=${encodeURIComponent(z.name)}'">
+                <div class="zone-info">${z.name}</div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    async function openZone(z) {
+        const viewer = document.getElementById("zoneViewer");
+        const frame = document.getElementById("zoneFrame");
+
+        let rawUrl = z.url || "";
+        let finalUrl = rawUrl.includes("{HTML_URL}")
+            ? rawUrl.replace("{HTML_URL}/", config.html)
+            : config.html + rawUrl.replace(/^\//, "");
+
+        viewer.style.display = "block";
+
+        try {
+            // Force rendering by fetching as a blob and setting as source
+            const res = await fetch(finalUrl);
+            const blob = await res.blob();
+            const blobUrl = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
+            frame.src = blobUrl;
+        } catch (e) {
+            // Fallback to direct URL if fetch is blocked
+            frame.src = finalUrl;
+        }
+    }
+
+    function closeViewer() {
+        document.getElementById("zoneViewer").style.display = "none";
+        // Cleanup Blob URL to save memory
+        if (document.getElementById("zoneFrame").src.startsWith('blob:')) {
+            URL.revokeObjectURL(document.getElementById("zoneFrame").src);
+        }
+        document.getElementById("zoneFrame").src = "about:blank";
+    }
+
+    function filterZones() {
+        const query = document.getElementById("searchBar").value.toLowerCase();
+        const filtered = zones.filter(z => z.name.toLowerCase().includes(query));
+        displayZones(filtered);
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
