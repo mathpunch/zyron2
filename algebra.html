@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MathPunch | Ultra-Modern</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --accent: #00d4ff; 
+            --bg: #030509; 
+            --card-bg: rgba(255, 255, 255, 0.03); 
+            --border: rgba(255, 255, 255, 0.08); 
+        }
+
+        * { box-sizing: border-box; }
+        body { 
+            margin: 0; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            color: white; 
+            height: 100vh; 
+            overflow: hidden; 
+            background-image: radial-gradient(circle at 50% 0%, #0d1b2a 0%, #030509 100%); 
+        }
+
+        /* FLOATING NAVIGATION */
+        .nav-island { 
+            position: fixed; top: 25px; left: 50%; transform: translateX(-50%); 
+            width: 85%; max-width: 800px; display: flex; align-items: center; 
+            padding: 10px 25px; background: rgba(15, 20, 30, 0.7); 
+            backdrop-filter: blur(25px); border: 1px solid var(--border); 
+            border-radius: 24px; z-index: 1000; box-shadow: 0 15px 35px rgba(0,0,0,0.6); 
+        }
+
+        .search-container { 
+            display: flex; align-items: center; background: rgba(255,255,255,0.04); 
+            padding: 10px 18px; border-radius: 16px; flex-grow: 1; margin: 0 20px; 
+        }
+
+        .search-container input { 
+            background: none; border: none; color: white; padding-left: 12px; 
+            width: 100%; outline: none; font-size: 15px;
+        }
+
+        /* ORGANIZED GRID */
+        #container { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+            gap: 50px; /* Spacious gaps for a modern feel */
+            padding: 140px 60px 80px; 
+            height: 100vh; overflow-y: auto; scrollbar-width: none;
+        }
+        #container::-webkit-scrollbar { display: none; }
+
+        .zone-card { 
+            background: var(--card-bg); border: 1px solid var(--border); 
+            border-radius: 28px; aspect-ratio: 16/10; position: relative; 
+            transition: all 0.5s cubic-bezier(0.2, 1, 0.3, 1); 
+            overflow: hidden; cursor: pointer;
+        }
+
+        .zone-card:hover { 
+            transform: translateY(-15px) scale(1.03); 
+            border-color: var(--accent); 
+            box-shadow: 0 30px 60px rgba(0,0,0,0.7), 0 0 20px rgba(0, 212, 255, 0.1); 
+        }
+
+        .zone-card img { 
+            width: 100%; height: 100%; object-fit: cover; 
+            opacity: 0.5; transition: 0.6s; 
+        }
+
+        .zone-card:hover img { opacity: 0.9; }
+
+        .zone-info { 
+            position: absolute; bottom: 0; left: 0; right: 0; padding: 25px; 
+            background: linear-gradient(transparent, rgba(0,0,0,0.95)); 
+            font-weight: 800; font-size: 1.1rem; text-align: center; 
+        }
+
+        /* PRE-FLIGHT LOADER (Fixes the "Double Click" bug) */
+        #preloader {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+            display: none; flex-direction: column; align-items: center;
+            justify-content: center; z-index: 5000;
+        }
+        .pulse {
+            width: 60px; height: 60px; border: 4px solid var(--border);
+            border-top-color: var(--accent); border-radius: 50%;
+            animation: spin 0.8s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* VIEWER */
+        #zoneViewer { position: fixed; inset: 0; background: #000; display: none; z-index: 4000; }
+        #closeBtn { 
+            position: absolute; top: 30px; right: 30px; width: 55px; height: 55px; 
+            background: rgba(255,255,255,0.08); border: 1px solid var(--border); 
+            color: white; border-radius: 20px; display: flex; align-items: center; 
+            justify-content: center; cursor: pointer; backdrop-filter: blur(15px); transition: 0.2s;
+        }
+        #closeBtn:hover { background: #ff4757; transform: rotate(90deg); }
+
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+
+<div id="preloader">
+    <div class="pulse"></div>
+    <p style="margin-top: 20px; font-weight: 600; letter-spacing: 1px;">OPTIMIZING GAME ENGINE...</p>
+</div>
+
+<nav class="nav-island">
+    <div style="font-weight: 900; color: var(--accent); font-size: 1.4rem; letter-spacing: -1px;">MATHPUNCH</div>
+    <div class="search-container">
+        <i class="fas fa-search" style="opacity: 0.3"></i>
+        <input id="searchBar" placeholder="Search mathpunch archive..." oninput="filterZones()">
+    </div>
+    <div id="liveCount" style="font-weight: 800; background: var(--accent); color: #000; padding: 5px 15px; border-radius: 12px; font-size: 12px;">0</div>
+</nav>
+
+<div id="container"></div>
+
+<div id="zoneViewer">
+    <div id="closeBtn" onclick="closeViewer()"><i class="fas fa-times fa-xl"></i></div>
+    <iframe id="zoneFrame"></iframe>
+</div>
+
+<script>
+    const config = {
+        json: "https://cdn.jsdelivr.net/gh/mathpunch/assets@main/zones.json",
+        cover: "https://cdn.jsdelivr.net/gh/mathpunch/covers@main/",
+        html: "https://cdn.jsdelivr.net/gh/mathpunch/html@main/"
+    };
+
+    let zones = [];
+
+    async function init() {
+        try {
+            const response = await fetch(config.json);
+            zones = await response.json();
+            displayZones(zones);
+        } catch (err) {
+            document.getElementById("container").innerHTML = `<p style="opacity: 0.5; grid-column: 1/-1; text-align: center;">Unable to sync with mathpunch/assets</p>`;
+        }
+    }
+
+    function displayZones(list) {
+        const container = document.getElementById("container");
+        container.innerHTML = "";
+        document.getElementById("liveCount").innerText = list.length;
+
+        list.forEach(z => {
+            const card = document.createElement("div");
+            card.className = "zone-card";
+            card.onclick = () => openZone(z);
+
+            let rawCover = z.cover || "";
+            let finalCover = rawCover.includes("{COVER_URL}") 
+                ? rawCover.replace("{COVER_URL}/", config.cover) 
+                : config.cover + rawCover.replace(/^\//, "");
+
+            card.innerHTML = `
+                <img src="${finalCover}" loading="lazy" onerror="this.src='https://via.placeholder.com/600x400/111/fff?text=No+Preview'">
+                <div class="zone-info">${z.name}</div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    async function openZone(z) {
+        const preloader = document.getElementById("preloader");
+        const viewer = document.getElementById("zoneViewer");
+        const frame = document.getElementById("zoneFrame");
+
+        let rawUrl = z.url || "";
+        let finalUrl = rawUrl.includes("{HTML_URL}")
+            ? rawUrl.replace("{HTML_URL}/", config.html)
+            : config.html + rawUrl.replace(/^\//, "");
+
+        // 1. Show preloader
+        preloader.style.display = "flex";
+        
+        // 2. Clear previous frame content entirely
+        frame.src = "about:blank";
+
+        try {
+            // 3. Fetch with cache-busting and priority
+            const res = await fetch(finalUrl, { priority: 'high', cache: 'no-cache' });
+            let htmlText = await res.text();
+
+            // 4. Inject base tag for external assets
+            const baseTag = `<base href="${config.html}">`;
+            htmlText = htmlText.includes('<head>') 
+                ? htmlText.replace('<head>', '<head>' + baseTag) 
+                : baseTag + htmlText;
+
+            // 5. Build Blob and load
+            const blob = new Blob([htmlText], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
+            
+            frame.onload = () => {
+                preloader.style.display = "none";
+                viewer.style.display = "block";
+            };
+            frame.src = blobUrl;
+
+        } catch (e) {
+            // Fallback for CORS restricted sites
+            frame.src = finalUrl;
+            preloader.style.display = "none";
+            viewer.style.display = "block";
+        }
+    }
+
+    function closeViewer() {
+        document.getElementById("zoneViewer").style.display = "none";
+        document.getElementById("zoneFrame").src = "about:blank";
+    }
+
+    function filterZones() {
+        const query = document.getElementById("searchBar").value.toLowerCase();
+        displayZones(zones.filter(z => z.name.toLowerCase().includes(query)));
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
