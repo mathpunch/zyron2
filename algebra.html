@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MathPunch | High-Performance Library</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --accent: #00d4ff; 
+            --bg: #020408; 
+            --card-bg: rgba(255, 255, 255, 0.03); 
+            --border: rgba(255, 255, 255, 0.1); 
+        }
+
+        * { box-sizing: border-box; }
+
+        body { 
+            margin: 0; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            color: white; 
+            height: 100vh; 
+            overflow: hidden; 
+            background-image: radial-gradient(circle at 50% -20%, #0d1b2a 0%, #020408 80%); 
+        }
+
+        /* NAVIGATION */
+        .nav-container { 
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%); 
+            width: 90%; max-width: 900px; display: flex; align-items: center; 
+            padding: 12px 24px; background: rgba(10, 15, 25, 0.8); 
+            backdrop-filter: blur(20px); border: 1px solid var(--border); 
+            border-radius: 20px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+        }
+
+        .search-wrapper { 
+            display: flex; align-items: center; background: rgba(255,255,255,0.05); 
+            padding: 8px 15px; border-radius: 12px; flex-grow: 1; margin: 0 20px; 
+        }
+
+        .search-wrapper input { 
+            background: none; border: none; color: white; padding-left: 10px; 
+            width: 100%; outline: none; font-family: inherit; 
+        }
+
+        /* GRID WITH MASSIVE GAPS */
+        #container { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 50px; /* Increased gap for better organization */
+            padding: 140px 60px 80px; 
+            height: 100vh; overflow-y: auto; scroll-behavior: smooth;
+        }
+
+        .zone-card { 
+            background: var(--card-bg); border: 1px solid var(--border); 
+            border-radius: 24px; aspect-ratio: 16/10; position: relative; 
+            transition: all 0.4s cubic-bezier(0.2, 1, 0.3, 1); 
+            overflow: hidden; cursor: pointer; max-width: 400px; margin: auto;
+        }
+
+        .zone-card:hover { 
+            transform: translateY(-12px) scale(1.02); 
+            border-color: var(--accent); 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8), 0 0 15px rgba(0, 212, 255, 0.2); 
+        }
+
+        .zone-card img { 
+            width: 100%; height: 100%; object-fit: cover; 
+            opacity: 0.7; transition: 0.5s; 
+        }
+
+        .zone-card:hover img { opacity: 1; }
+
+        .zone-info { 
+            position: absolute; bottom: 0; left: 0; right: 0; padding: 20px; 
+            background: linear-gradient(transparent, rgba(0,0,0,0.9)); 
+            font-weight: 800; font-size: 1rem; text-align: center; 
+        }
+
+        /* LOADING SPINNER */
+        #loadOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            display: none; flex-direction: column; align-items: center;
+            justify-content: center; z-index: 3000; backdrop-filter: blur(5px);
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid var(--border);
+            border-top-color: var(--accent); border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* VIEWER */
+        #zoneViewer { position: fixed; inset: 0; background: #000; display: none; z-index: 2000; }
+        #closeBtn { 
+            position: absolute; top: 25px; right: 25px; width: 50px; height: 50px; 
+            background: rgba(255,255,255,0.1); border: 1px solid var(--border); 
+            color: white; border-radius: 15px; display: flex; align-items: center; 
+            justify-content: center; cursor: pointer; backdrop-filter: blur(10px); z-index: 2001; 
+        }
+
+        iframe { width: 100%; height: 100%; border: none; }
+        #container::-webkit-scrollbar { width: 8px; }
+        #container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="loadOverlay">
+    <div class="spinner"></div>
+    <p id="loadStatus">Downloading Game Data...</p>
+</div>
+
+<nav class="nav-container">
+    <div style="font-weight: 800; color: var(--accent); font-size: 1.3rem;">MATHPUNCH</div>
+    <div class="search-wrapper">
+        <i class="fas fa-search" style="opacity: 0.4"></i>
+        <input id="searchBar" placeholder="Search the library..." oninput="filterZones()">
+    </div>
+    <div id="liveCount" style="font-weight: 800; background: var(--accent); color: #000; padding: 4px 12px; border-radius: 20px;">0</div>
+</nav>
+
+<div id="container"></div>
+
+<div id="zoneViewer">
+    <div id="closeBtn" onclick="closeViewer()"><i class="fas fa-times fa-lg"></i></div>
+    <iframe id="zoneFrame"></iframe>
+</div>
+
+<script>
+    const config = {
+        json: "https://cdn.jsdelivr.net/gh/mathpunch/assets@main/zones.json",
+        cover: "https://cdn.jsdelivr.net/gh/mathpunch/covers@main/",
+        html: "https://cdn.jsdelivr.net/gh/mathpunch/html@main/"
+    };
+
+    let zones = [];
+
+    async function init() {
+        try {
+            const response = await fetch(config.json);
+            zones = await response.json();
+            displayZones(zones);
+        } catch (err) {
+            document.getElementById("container").innerHTML = `<p style="text-align:center; opacity:0.5; grid-column:1/-1;">Connection Error.</p>`;
+        }
+    }
+
+    function displayZones(list) {
+        const container = document.getElementById("container");
+        container.innerHTML = "";
+        document.getElementById("liveCount").innerText = list.length;
+
+        list.forEach(z => {
+            const card = document.createElement("div");
+            card.className = "zone-card";
+            card.onclick = () => openZone(z);
+
+            let rawCover = z.cover || "";
+            let finalCover = rawCover.includes("{COVER_URL}") 
+                ? rawCover.replace("{COVER_URL}/", config.cover) 
+                : config.cover + rawCover.replace(/^\//, "");
+
+            card.innerHTML = `
+                <img src="${finalCover}" loading="lazy">
+                <div class="zone-info">${z.name}</div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    async function openZone(z) {
+        const loader = document.getElementById("loadOverlay");
+        const viewer = document.getElementById("zoneViewer");
+        const frame = document.getElementById("zoneFrame");
+
+        let rawUrl = z.url || "";
+        let finalUrl = rawUrl.includes("{HTML_URL}")
+            ? rawUrl.replace("{HTML_URL}/", config.html)
+            : config.html + rawUrl.replace(/^\//, "");
+
+        // FOCUS MODE: Show loader immediately
+        loader.style.display = "flex";
+        document.getElementById("loadStatus").innerText = `Downloading ${z.name}...`;
+
+        try {
+            // Priority fetch
+            const res = await fetch(finalUrl, { priority: 'high' });
+            let htmlText = await res.text();
+
+            // Fix relative assets
+            const baseTag = `<base href="${config.html}">`;
+            htmlText = htmlText.includes('<head>') 
+                ? htmlText.replace('<head>', '<head>' + baseTag) 
+                : baseTag + htmlText;
+
+            const blob = new Blob([htmlText], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
+            
+            frame.src = blobUrl;
+            
+            // Wait for iframe to signal it's ready
+            frame.onload = () => {
+                loader.style.display = "none";
+                viewer.style.display = "block";
+            };
+        } catch (e) {
+            console.error("Download failed", e);
+            frame.src = finalUrl;
+            loader.style.display = "none";
+            viewer.style.display = "block";
+        }
+    }
+
+    function closeViewer() {
+        document.getElementById("zoneViewer").style.display = "none";
+        document.getElementById("zoneFrame").src = "about:blank";
+    }
+
+    function filterZones() {
+        const query = document.getElementById("searchBar").value.toLowerCase();
+        displayZones(zones.filter(z => z.name.toLowerCase().includes(query)));
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
