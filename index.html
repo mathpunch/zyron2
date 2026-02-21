@@ -1265,7 +1265,7 @@
             // 2. Import Libraries Dynamically
             let ShaderCanvas, ShaderClient
             try {
-              this.loadingStatus = 'Loading daquans ass'
+              this.loadingStatus = 'Loading proxy engine...'
               const [canvasModule, clientModule] = await Promise.all([
                 import('./shader-canvas.js'),
                 import('./shader-client.js'),
@@ -1281,7 +1281,7 @@
 
             // 3. Initialize ShaderCanvas
             try {
-              this.loadingStatus = 'Starting daquans ass'
+              this.loadingStatus = 'Starting proxy...'
               this.canvas = new ShaderCanvas('canvas-container')
             } catch (e) {
               clearTimeout(timeout)
